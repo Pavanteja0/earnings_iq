@@ -1,0 +1,18 @@
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Environment Variables (Crucial: keeps your API key secure!)
+.env
+.env.local
+
+# Project Specific Data and Databases
+data/
+db/
+
+# Streamlit config
+.streamlit/

@@ -1,0 +1,55 @@
+import os
+from pathlib import Path
+import google.generativeai as genai
+from dotenv import load_dotenv
+
+# Load local environment variables if a .env exists
+load_dotenv()
+
+# Base directories
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
+DB_DIR = BASE_DIR / "db"
+
+# Create directories if they do not exist
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+DB_DIR.mkdir(parents=True, exist_ok=True)
+
+# API Keys and Models configurations
+DEFAULT_GEMINI_MODEL = "gemini-1.5-flash"
+PREMIUM_GEMINI_MODEL = "gemini-1.5-pro"
+EMBEDDING_MODEL = "models/text-embedding-004"
+
+def get_api_key():
+    """Retrieves the Gemini API key from environment variables."""
+    return os.getenv("GEMINI_API_KEY")
+
+def init_gemini(api_key=None):
+    """
+    Initializes the google.generativeai SDK and verifies if the key is valid.
+    Priority:
+    1. Provided parameter `api_key`
+    2. Environment variable `GEMINI_API_KEY`
+    """
+    key = api_key or get_api_key()
+    if not key:
+        return False
+    
+    try:
+        genai.configure(api_key=key)
+        # Force a network request to verify the key.
+        # Since list_models returns a generator, we must trigger iteration (e.g. next()).
+        next(iter(genai.list_models()))
+        return True
+    except Exception:
+        # Reset configuration on failure so invalid keys don't linger in memory
+        genai.configure(api_key="")
+        return False
+
+def is_gemini_api_active():
+    """Checks if a verified Gemini API key is configured and active."""
+    try:
+        next(iter(genai.list_models()))
+        return True
+    except Exception:
+        return False
