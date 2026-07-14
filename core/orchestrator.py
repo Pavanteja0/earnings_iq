@@ -111,14 +111,17 @@ class Orchestrator:
         self.synth_agent.logs.clear()
         self.auditor_agent.logs.clear()
 
-        # Step 1: Quantitative Financial Analysis
-        update_progress("Initiating Quantitative Analyst Agent...", 10)
-        quant_report = self.quant_agent.analyze(self.retriever)
+        # Step 1 & 2: Concurrently run Quantitative & Qualitative analyses in parallel
+        update_progress("Initiating Quantitative & Qualitative Analysts in parallel...", 20)
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            future_quant = executor.submit(self.quant_agent.analyze, self.retriever)
+            future_qual = executor.submit(self.qual_agent.analyze, self.retriever, call_analysis_raw)
+            
+            quant_report = future_quant.result()
+            qual_report = future_qual.result()
+            
         agent_logs.append({"agent": self.quant_agent.name, "logs": list(self.quant_agent.logs), "output": quant_report})
-
-        # Step 2: Qualitative Call & Sentiment Analysis
-        update_progress("Initiating Qualitative Sentiment Agent...", 30)
-        qual_report = self.qual_agent.analyze(self.retriever, call_analysis_raw)
         agent_logs.append({"agent": self.qual_agent.name, "logs": list(self.qual_agent.logs), "output": qual_report})
 
         # Step 3: Synthesis Research Brief Drafting

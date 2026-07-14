@@ -9,28 +9,24 @@ def parse_presentation_deck(file_path: Path, use_vision: bool = True) -> List[Di
     Parses an investor presentation slide deck (PDF format).
     For each slide:
       - Renders the slide as a PNG image.
-      - Uses Gemini Vision to describe the slide's visual and textual content.
+      - Uses Gemini Vision to describe the slide's visual and textual content in parallel threads.
       - Falls back to PyMuPDF raw text extraction if Vision is unavailable or disabled.
     """
+    import concurrent.futures
     doc = fitz.open(file_path)
-    chunks = []
     
     # Check if Gemini is configured and active
     from config import is_gemini_api_active
     is_gemini_active = is_gemini_api_active()
 
-    for page_idx, page in enumerate(doc):
-        page_num = page_idx + 1
+    def process_slide(page_num: int, page) -> Dict[str, Any]:
         slide_text = page.get_text("text").strip()
-        
-        # Step 1: Render slide page to image bytes for vision analysis
         pix = page.get_pixmap(dpi=150)
         img_bytes = pix.tobytes("png")
         
         vision_description = ""
         analysis_type = "Raw Text"
         
-        # Step 2: Use Gemini Vision to transcribe the slide's charts and details
         if use_vision and is_gemini_active:
             try:
                 model = genai.GenerativeModel("gemini-1.5-flash")
@@ -42,7 +38,6 @@ def parse_presentation_deck(file_path: Path, use_vision: bool = True) -> List[Di
                     "Be extremely precise with numbers. Do not summarize or approximate values; extract them exactly."
                 )
                 
-                # Format for Gemini API
                 image_part = {
                     "mime_type": "image/png",
                     "data": img_bytes
@@ -52,10 +47,8 @@ def parse_presentation_deck(file_path: Path, use_vision: bool = True) -> List[Di
                 vision_description = response.text
                 analysis_type = "Multimodal Vision Analysis"
             except Exception as e:
-                # Log error and fallback to raw text
                 vision_description = f"[Vision analysis failed: {str(e)}]"
         
-        # Combine information. If vision succeeded, combine it with raw text. Otherwise, use raw text.
         if vision_description:
             full_content = (
                 f"--- SLIDE {page_num} SUMMARY ({analysis_type}) ---\n"
@@ -69,7 +62,7 @@ def parse_presentation_deck(file_path: Path, use_vision: bool = True) -> List[Di
                 f"{slide_text if slide_text else '[Empty slide/No extractable text]'}"
             )
             
-        chunks.append({
+        return {
             "text": full_content,
             "metadata": {
                 "page": page_num,
@@ -77,7 +70,16 @@ def parse_presentation_deck(file_path: Path, use_vision: bool = True) -> List[Di
                 "type": "Slide Deck",
                 "analysis_type": analysis_type
             }
-        })
-        
+        }
+
+    chunks = []
+    # Concurrently process slides in parallel threads
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(len(doc), 1)) as executor:
+        futures = {executor.submit(process_slide, idx + 1, doc[idx]): idx for idx in range(len(doc))}
+        for future in concurrent.futures.as_completed(futures):
+            chunks.append(future.result())
+            
+    # Sort chunks by page number since threads return out of order
+    chunks.sort(key=lambda x: x["metadata"]["page"])
     doc.close()
     return chunks
