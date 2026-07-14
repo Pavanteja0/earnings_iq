@@ -115,9 +115,21 @@ with st.sidebar:
     st.markdown("#### Test Datasets")
     load_sample = st.button("⚡ Load Acme Corp. Q3 Sample", use_container_width=True)
     if load_sample:
-        st.session_state.pdf_10q = DATA_DIR / "sample_acme_10q.pdf"
-        st.session_state.pdf_deck = DATA_DIR / "sample_acme_deck.pdf"
-        st.session_state.call_transcript = DATA_DIR / "sample_acme_transcript.txt"
+        pdf_10q = DATA_DIR / "sample_acme_10q.pdf"
+        pdf_deck = DATA_DIR / "sample_acme_deck.pdf"
+        call_transcript = DATA_DIR / "sample_acme_transcript.txt"
+        
+        # Self-healing: if files don't exist (e.g. running on Streamlit Cloud), generate them dynamically!
+        if not (pdf_10q.exists() and pdf_deck.exists() and call_transcript.exists()):
+            try:
+                import create_sample_data
+                create_sample_data.main()
+            except Exception as e:
+                st.error(f"Failed to generate sample data: {e}")
+
+        st.session_state.pdf_10q = pdf_10q
+        st.session_state.pdf_deck = pdf_deck
+        st.session_state.call_transcript = call_transcript
         st.session_state.loaded_sample_name = "Acme Corp (NASDAQ: ACME)"
         st.success("Loaded Acme Corp. sample files!")
 
