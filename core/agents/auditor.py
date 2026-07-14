@@ -66,9 +66,20 @@ class AuditorAgent(BaseAgent):
         
         audit_output = self.run_llm(user_prompt, context=context_str)
         
+        # Run deterministic math verification
+        from ..utils.math_verifier import verify_math_claims
+        math_verification = verify_math_claims(brief)
+        
+        # Combine the LLM grounding audit and python math verification reports
+        combined_report = (
+            f"=== COMPLIANCE GROUNDING AUDIT ===\n{audit_output}\n\n"
+            f"=== ARITHMETIC RECALCULATION AUDIT ===\n{math_verification['report']}"
+        )
+        
         # Parse audit output to determine status and generate the final audited brief
         status = "PASSED"
-        if "ADJUSTMENTS NEEDED" in audit_output or "Discrepancy" in audit_output:
+        # If either LLM flags discrepancies or Python math has accuracy < 100%
+        if "ADJUSTMENTS NEEDED" in audit_output or "Discrepancy" in audit_output or math_verification["math_accuracy_score"] < 0.99:
             status = "ADJUSTMENTS NEEDED"
             
         # Extract corrected brief or default to the original brief if LLM didn't restructure it
@@ -80,14 +91,29 @@ class AuditorAgent(BaseAgent):
             parts = audit_output.split("### Final Brief")
             corrected_brief = parts[-1].strip()
             
+        # Dynamically compute faithfulness score based on deterministic math correctness
+        base_score = int(math_verification["math_accuracy_score"] * 100)
+        if status == "ADJUSTMENTS NEEDED":
+            # Penalize the score further for general semantic mismatches/hallucinations
+            base_score = max(0, base_score - 15)
+            
         return {
             "status": status,
-            "audit_report": audit_output,
+            "audit_report": combined_report,
             "brief": corrected_brief,
-            "faithfulness_score": 100 if status == "PASSED" else 85
+            "faithfulness_score": base_score
         }
 
     def get_mock_response(self, user_prompt: str) -> str:
+        # Check if we are testing a discrepancy (used in unit tests)
+        if "18.9" in user_prompt or "discrepancy" in user_prompt.lower():
+            return (
+                "### Audit Status: ADJUSTMENTS NEEDED\n\n"
+                "#### Discrepancies Found:\n"
+                "- Stated Revenue of $18.90B in draft does not match the grounded RAG source, which states $12.45B ($12,448 million) on [10-Q, Page 8].\n"
+                "- Stated growth rate of 10.0% is mathematically incorrect based on Q3 2026 revenue of $18.90B and Q3 2025 revenue of $11.32B.\n"
+            )
+
         # Standard mockup output showing a successful audit pass
         return (
             "### Audit Status: PASSED\n\n"

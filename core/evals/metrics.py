@@ -19,13 +19,13 @@ def evaluate_brief(
     is_gemini_active = is_gemini_api_active()
 
     if not is_gemini_active:
-        # Mock metrics when offline
+        # Do not return fake high scores. Indicate clearly that the system is offline.
         return {
-            "faithfulness": 0.95,
-            "answer_relevance": 0.90,
-            "math_accuracy": 1.00,
-            "overall_score": 0.95,
-            "feedback": "Offline evaluation mode. High baseline scores assumed based on audit templates."
+            "faithfulness": -1.0,
+            "answer_relevance": -1.0,
+            "math_accuracy": -1.0,
+            "overall_score": -1.0,
+            "feedback": "Offline evaluation mode. Grounding evaluations (faithfulness, relevance, math accuracy) require an active GEMINI_API_KEY to run the LLM-as-a-judge suite."
         }
 
     try:
@@ -55,26 +55,32 @@ def evaluate_brief(
         import json
         eval_data = json.loads(response.text.strip())
         
-        # Compute overall score
+        # Determine actual math accuracy score deterministically!
+        from core.utils.math_verifier import verify_math_claims
+        math_verification = verify_math_claims(brief)
+        m = math_verification.get("math_accuracy_score", 0.0)
+        
         f = eval_data.get("faithfulness_score", 0.0)
         r = eval_data.get("relevance_score", 0.0)
-        m = eval_data.get("math_score", 0.0)
         overall = (f + r + m) / 3.0
+        
+        explanations = eval_data.get("explanations", {})
+        explanations["Math Accuracy (Deterministic)"] = math_verification.get("report", "No claims recalculated.")
         
         return {
             "faithfulness": f,
             "answer_relevance": r,
             "math_accuracy": m,
             "overall_score": overall,
-            "explanations": eval_data.get("explanations", {}),
+            "explanations": explanations,
             "feedback": eval_data.get("feedback", "Evaluation successfully computed.")
         }
         
     except Exception as e:
         return {
-            "faithfulness": 0.85,
-            "answer_relevance": 0.80,
-            "math_accuracy": 0.90,
-            "overall_score": 0.85,
-            "feedback": f"Evaluation crashed: {str(e)}. Defaulting to safe fallback scores."
+            "faithfulness": -1.0,
+            "answer_relevance": -1.0,
+            "math_accuracy": -1.0,
+            "overall_score": -1.0,
+            "feedback": f"Evaluation crashed: {str(e)}."
         }

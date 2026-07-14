@@ -309,14 +309,18 @@ with tab_evals:
         st.write("Evals are computed using Gemini-as-a-judge to evaluate faithfulness, relevance, and calculations accuracy.")
         
         c1, c2, c3, c4 = st.columns(4)
+        
+        def format_metric(val):
+            return f"{int(val * 100)}%" if val >= 0 else "N/A (Offline)"
+            
         with c1:
-            st.metric("Faithfulness (Groundedness)", f"{int(evals['faithfulness'] * 100)}%")
+            st.metric("Faithfulness (Groundedness)", format_metric(evals['faithfulness']))
         with c2:
-            st.metric("Answer Relevance", f"{int(evals['answer_relevance'] * 100)}%")
+            st.metric("Answer Relevance", format_metric(evals['answer_relevance']))
         with c3:
-            st.metric("Math Correctness", f"{int(evals['math_accuracy'] * 100)}%")
+            st.metric("Math Correctness", format_metric(evals['math_accuracy']))
         with c4:
-            st.metric("Aggregate Evals Score", f"{int(evals['overall_score'] * 100)}%")
+            st.metric("Aggregate Evals Score", format_metric(evals['overall_score']))
             
         st.markdown("---")
         st.markdown("#### Evaluator Feedback:")

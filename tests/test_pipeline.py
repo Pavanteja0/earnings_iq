@@ -98,3 +98,64 @@ def test_orchestrator_workflow():
     assert "evals" in results
     assert "agent_logs" in results
     assert len(results["agent_logs"]) == 4  # 4 agents
+
+def test_real_pdf_parsing():
+    """Tests parsing on a real, messy SEC 10-K/10-Q PDF (Uber 10-K)."""
+    pdf_path = DATA_DIR / "real_uber_2021.pdf"
+    assert pdf_path.exists(), "Real Uber 10-K PDF was not downloaded."
+    
+    chunks = parse_10q_pdf(pdf_path)
+    assert len(chunks) > 0
+    # Confirm it parses multiple pages and retains standard metadata
+    assert any(c["metadata"]["page"] > 10 for c in chunks)
+    assert all(c["metadata"]["type"] == "10-Q" for c in chunks)
+
+def test_real_deck_parsing():
+    """Tests parsing on a real, chart-heavy investor deck PDF (Tesla Investor Deck)."""
+    deck_path = DATA_DIR / "real_tsla_deck.pdf"
+    assert deck_path.exists(), "Real Tesla deck PDF was not downloaded."
+    
+    chunks = parse_presentation_deck(deck_path, use_vision=False)
+    assert len(chunks) > 0
+    # Confirm it extracted textual sections from Tesla's slides
+    assert any("TSLA" in c["text"] or "Tesla" in c["text"] for c in chunks)
+
+def test_auditor_flags_discrepancy():
+    """
+    Correctness Test: Deliberately introduces a wrong number and arithmetic mistake
+    in the draft brief, and verifies that the Auditor Agent successfully flags it.
+    """
+    indexer = Indexer()
+    indexer.reset_collection()
+    
+    # 1. Index correct base numbers in RAG database
+    correct_chunks = [
+        {
+            "text": "Acme reported Q3 2026 revenue of $12,448 million ($12.45B) and Q3 2025 revenue of $11,316 million ($11.32B).",
+            "metadata": {"type": "10-Q", "page": 8, "source": "sample_acme_10q.pdf"}
+        }
+    ]
+    indexer.add_chunks(correct_chunks)
+    retriever = Retriever(indexer)
+    
+    # 2. Write a brief containing a falsified revenue number and incorrect growth math
+    # Stated: Revenue is $18.90B (wrong, is $12.45B), and growth is 10.0% (wrong: (18.9 - 11.32)/11.32 = 66.9%)
+    incorrect_brief = (
+        "Acme Corporation delivered Q3 2026 performance. "
+        "Revenue was $18.90B [10-Q, Page 8] compared to $11.32B in the prior year, representing a YoY growth of 10.0% [10-Q, Page 8]."
+    )
+    
+    # 3. Execute the Audit
+    from core.agents.auditor import AuditorAgent
+    auditor = AuditorAgent()
+    audit_res = auditor.audit(incorrect_brief, retriever)
+    
+    # 4. Assertions: Auditor must catch the discrepancies
+    assert audit_res["status"] == "ADJUSTMENTS NEEDED"
+    # Grounding score must be penalized due to math error
+    assert audit_res["faithfulness_score"] < 100
+    
+    # Verify the audit log mentions the discrepancy or calculations
+    report = audit_res["audit_report"].lower()
+    assert "discrepancy" in report or "adjustments" in report or "error" in report
+
