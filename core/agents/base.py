@@ -29,7 +29,7 @@ class BaseAgent:
         self.log("Invoking LLM", f"Prompt length: {len(user_prompt)}")
         
         # Configure model
-        from config import is_gemini_api_active
+        from config import is_gemini_api_active, DEFAULT_GEMINI_MODEL
         is_gemini_active = is_gemini_api_active()
 
         if not is_gemini_active:
@@ -38,7 +38,7 @@ class BaseAgent:
 
         try:
             model = genai.GenerativeModel(
-                model_name="gemini-1.5-flash",
+                model_name=DEFAULT_GEMINI_MODEL,
                 system_instruction=self.system_prompt
             )
             
@@ -47,11 +47,28 @@ class BaseAgent:
                 full_prompt += f"--- CONTEXT REFERENCE ---\n{context}\n\n"
             full_prompt += f"--- USER INSTRUCTION ---\n{user_prompt}"
 
-            response = model.generate_content(
-                full_prompt,
-                generation_config={"temperature": temperature}
-            )
+            # API Rate-Limit (HTTP 429) retry buffer with exponential backoff
+            import time
+            retries = 3
+            backoff = 2
+            response = None
             
+            for attempt in range(retries):
+                try:
+                    response = model.generate_content(
+                        full_prompt,
+                        generation_config={"temperature": temperature}
+                    )
+                    break
+                except Exception as ex:
+                    err_str = str(ex).lower()
+                    if ("429" in err_str or "resource" in err_str or "quota" in err_str or "exhausted" in err_str) and attempt < retries - 1:
+                        sleep_time = backoff ** attempt
+                        self.log("Rate Limited (429)", f"Retrying in {sleep_time}s... (Attempt {attempt+1}/{retries})")
+                        time.sleep(sleep_time)
+                    else:
+                        raise ex
+
             output_text = response.text
             self.log("LLM Response Received", f"Output length: {len(output_text)}")
             return output_text

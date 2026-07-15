@@ -31,11 +31,13 @@ def analyze_call_audio(file_path: Path) -> Dict[str, Any]:
                 transcript_text = f.read()
         else:  # PDF
             doc = fitz.open(file_path)
-            pages_text = []
-            for page in doc:
-                pages_text.append(page.get_text("text"))
-            transcript_text = "\n".join(pages_text)
-            doc.close()
+            try:
+                pages_text = []
+                for page in doc:
+                    pages_text.append(page.get_text("text"))
+                transcript_text = "\n".join(pages_text)
+            finally:
+                doc.close()
             
         # Analyze the text transcript using Gemini (if active) or a rule-based mock
         analysis_text = ""
@@ -90,19 +92,26 @@ def analyze_call_audio(file_path: Path) -> Dict[str, Any]:
                 }
             }
             
+        audio_file = None
         try:
             # Upload the audio file to the Gemini File API
             print(f"Uploading audio file {file_path} to Gemini File API...")
             audio_file = genai.upload_file(path=str(file_path))
             print(f"File uploaded. Current state: {audio_file.state.name}")
             
-            # Wait for file processing to complete
-            while audio_file.state.name == "PROCESSING":
-                print("Waiting for audio processing to finish...")
+            # Wait for file processing to complete (state polling with safety timeout)
+            retries = 36  # Wait at most 3 minutes (36 * 5s)
+            while retries > 0:
+                state_name = getattr(audio_file.state, "name", str(audio_file.state)).upper()
+                if state_name != "PROCESSING":
+                    break
+                print(f"Waiting for audio processing to finish... ({retries*5}s remaining)")
                 time.sleep(5)
                 audio_file = genai.get_file(audio_file.name)
+                retries -= 1
                 
-            if audio_file.state.name == "FAILED":
+            state_name = getattr(audio_file.state, "name", str(audio_file.state)).upper()
+            if state_name == "FAILED":
                 raise Exception("Gemini File API processing failed.")
                 
             print("Audio processing complete. Querying Gemini for transcription and qualitative tone analysis...")
@@ -122,13 +131,6 @@ def analyze_call_audio(file_path: Path) -> Dict[str, Any]:
             
             response = model.generate_content([prompt, audio_file])
             
-            # Cleanup file from Gemini servers to be responsible
-            try:
-                genai.delete_file(audio_file.name)
-                print("Cleaned up audio file from Gemini File API.")
-            except Exception:
-                pass
-                
             return {
                 "transcript": response.text,
                 "analysis": response.text,
@@ -149,6 +151,14 @@ def analyze_call_audio(file_path: Path) -> Dict[str, Any]:
                     "mode": "error"
                 }
             }
+        finally:
+            # Guarantee garbage collection from Gemini Cloud File API
+            if audio_file is not None:
+                try:
+                    genai.delete_file(audio_file.name)
+                    print(f"Successfully deleted temp audio file {audio_file.name} from Gemini File API.")
+                except Exception as de:
+                    print(f"Failed to clean up temp audio file {audio_file.name}: {de}")
             
     else:
         raise ValueError(f"Unsupported file format: {suffix}")

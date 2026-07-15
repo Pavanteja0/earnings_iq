@@ -13,9 +13,15 @@ st.set_page_config(
 from config import init_gemini, DATA_DIR
 from core.orchestrator import Orchestrator
 
-# Initialize the Orchestrator
-if "orchestrator" not in st.session_state:
-    st.session_state.orchestrator = Orchestrator()
+# Centralized initialization of all session state variables at startup (M15)
+st.session_state.setdefault("orchestrator", Orchestrator())
+st.session_state.setdefault("pdf_10q", None)
+st.session_state.setdefault("pdf_deck", None)
+st.session_state.setdefault("call_transcript", None)
+st.session_state.setdefault("loaded_sample_name", None)
+st.session_state.setdefault("last_ingested_files", None)
+st.session_state.setdefault("last_stats", None)
+st.session_state.setdefault("analysis_results", None)
 
 orchestrator = st.session_state.orchestrator
 

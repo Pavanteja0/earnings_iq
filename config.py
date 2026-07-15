@@ -1,4 +1,9 @@
 import os
+import warnings
+
+# Suppress the FutureWarnings from deprecated google.generativeai package (M14)
+warnings.filterwarnings("ignore", category=FutureWarning, module="google.generativeai")
+
 # Skip GCE metadata server lookup to avoid connection timeouts in non-GCE environments
 os.environ["NO_GCE_CHECK"] = "True"
 

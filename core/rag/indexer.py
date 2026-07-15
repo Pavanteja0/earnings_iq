@@ -114,14 +114,54 @@ class Indexer:
             chunk_id = f"chunk_{metadata.get('type', 'doc')}_{uuid.uuid4().hex[:10]}_{idx}"
             ids.append(chunk_id)
 
-        # Add in batches to avoid size limits
+        # Concurrently compute embeddings in parallel batches to speed up RAG ingestion
+        embeddings = []
+        import concurrent.futures
+        from core.rag.retriever import DB_LOCK
+        
+        if self.embedding_fn.is_active:
+            emb_batch_size = 20
+            batches = [documents[i : i + emb_batch_size] for i in range(0, len(documents), emb_batch_size)]
+            
+            def get_embeddings_for_batch(batch_docs: List[str]) -> List[List[float]]:
+                try:
+                    response = genai.embed_content(
+                        model=EMBEDDING_MODEL,
+                        contents=batch_docs,
+                        task_type="retrieval_document"
+                    )
+                    return response["embedding"]
+                except Exception as e:
+                    print(f"Error in batch embedding: {e}. Falling back to mock embeddings.")
+                    # Fallback dummy embeddings for this batch
+                    dummy_embs = []
+                    for text in batch_docs:
+                        val = sum(ord(c) for c in text[:100]) % 100 / 100.0
+                        dummy_embs.append([val * (i / 768.0) for i in range(768)])
+                    return dummy_embs
+            
+            # Run batch embedding queries concurrently
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(len(batches) or 1, 5)) as executor:
+                results = list(executor.map(get_embeddings_for_batch, batches))
+                
+            for res in results:
+                embeddings.extend(res)
+        else:
+            # Generate dummy offline embeddings in memory (extremely fast)
+            for text in documents:
+                val = sum(ord(c) for c in text[:100]) % 100 / 100.0
+                embeddings.append([val * (i / 768.0) for i in range(768)])
+
+        # Add pre-computed embeddings to ChromaDB in batches, locking SQLite write operations safely
         batch_size = 100
         for i in range(0, len(documents), batch_size):
-            self.collection.add(
-                documents=documents[i : i + batch_size],
-                metadatas=metadatas[i : i + batch_size],
-                ids=ids[i : i + batch_size]
-            )
+            with DB_LOCK:
+                self.collection.add(
+                    documents=documents[i : i + batch_size],
+                    embeddings=embeddings[i : i + batch_size],
+                    metadatas=metadatas[i : i + batch_size],
+                    ids=ids[i : i + batch_size]
+                )
             
         print(f"Successfully indexed {len(documents)} chunks to ChromaDB.")
 

@@ -22,6 +22,27 @@ def download_file(url: str, dest_path: Path):
         return False
 
 def main():
+    # Security check: Ensure .gitignore ignores .env to prevent credential leaks
+    gitignore_path = Path(__file__).resolve().parent / ".gitignore"
+    if gitignore_path.exists():
+        with open(gitignore_path, "r", encoding="utf-8") as gf:
+            content = gf.read()
+        if ".env" not in content:
+            print("⚠️ Security Guardrail: '.env' was not ignored in .gitignore!")
+            try:
+                with open(gitignore_path, "a", encoding="utf-8") as gf:
+                    gf.write("\n.env\n")
+                print("✅ Successfully appended '.env' to .gitignore.")
+            except Exception as e:
+                print(f"Failed to auto-update .gitignore: {e}")
+    else:
+        try:
+            with open(gitignore_path, "w", encoding="utf-8") as gf:
+                gf.write(".env\n__pycache__/\n*.pyc\n")
+            print("✅ Created default .gitignore with '.env' ignored.")
+        except Exception as e:
+            print(f"Failed to create .gitignore: {e}")
+
     data_dir = Path(__file__).resolve().parent / "data"
     data_dir.mkdir(exist_ok=True)
     
