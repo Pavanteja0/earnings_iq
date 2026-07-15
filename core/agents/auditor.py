@@ -100,6 +100,8 @@ class AuditorAgent(BaseAgent):
         return {
             "status": status,
             "audit_report": combined_report,
+            "grounding_report": audit_output,
+            "math_report": math_verification["report"],
             "brief": corrected_brief,
             "faithfulness_score": base_score
         }

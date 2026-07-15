@@ -301,7 +301,12 @@ with tab_brief:
         col_main, col_sidebar = st.columns([3, 1])
         
         with col_main:
-            st.markdown(results["brief"])
+            # Clean up any raw LLM structural wrapping headers
+            import re
+            brief_text = results["brief"]
+            brief_text = re.sub(r"^###?\s+(Final|Corrected|Compiled|Research)?\s*Brief\s*\n+", "", brief_text, flags=re.IGNORECASE)
+            brief_text = re.sub(r"^===+.*?===+\n+", "", brief_text)
+            st.markdown(brief_text.strip())
             
         with col_sidebar:
             st.markdown("### Compliance & Audit Status")
@@ -312,8 +317,18 @@ with tab_brief:
             else:
                 st.warning("⚠️ Adjustments Applied (Minor numerical inconsistencies corrected)")
                 
-            with st.expander("Review Audit Log"):
-                st.markdown(results["audit_report"])
+            with st.expander("🔍 Grounding Audit"):
+                grounding_text = results.get("grounding_report", results["audit_report"])
+                grounding_text = re.sub(r"^===+.*?===+\n+", "", grounding_text)
+                st.markdown(grounding_text.strip())
+                
+            with st.expander("🧮 Math Recalculation"):
+                math_text = results.get("math_report", "")
+                math_text = re.sub(r"^===+.*?===+\n+", "", math_text)
+                if math_text:
+                    st.markdown(math_text.strip())
+                else:
+                    st.info("No math recalculations generated.")
                 
             st.markdown("---")
             st.markdown("### Investment Thesis Catalyst")

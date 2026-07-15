@@ -154,6 +154,8 @@ class Orchestrator:
             return {
                 "brief": final_brief,
                 "audit_report": audit_res["audit_report"],
+                "grounding_report": audit_res["grounding_report"],
+                "math_report": audit_res["math_report"],
                 "audit_status": audit_res["status"],
                 "evals": eval_metrics,
                 "agent_logs": agent_logs
@@ -201,6 +203,8 @@ class Orchestrator:
         return {
             "brief": final_brief,
             "audit_report": audit_res["audit_report"],
+            "grounding_report": audit_res["grounding_report"],
+            "math_report": audit_res["math_report"],
             "audit_status": audit_res["status"],
             "evals": eval_metrics,
             "agent_logs": agent_logs
