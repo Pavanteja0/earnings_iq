@@ -100,9 +100,9 @@ def test_orchestrator_workflow():
     assert len(results["agent_logs"]) == 4  # 4 agents
 
 def test_real_pdf_parsing():
-    """Tests parsing on a real, messy SEC 10-K/10-Q PDF (Uber 10-K)."""
-    pdf_path = DATA_DIR / "real_uber_2021.pdf"
-    assert pdf_path.exists(), "Real Uber 10-K PDF was not downloaded."
+    """Tests parsing on a real, messy SEC 10-K/10-Q PDF (using TSLA deck as source)."""
+    pdf_path = DATA_DIR / "real_tsla_deck.pdf"
+    assert pdf_path.exists(), "Real PDF was not downloaded."
     
     chunks = parse_10q_pdf(pdf_path, max_pages=15)
     assert len(chunks) > 0
