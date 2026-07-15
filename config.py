@@ -1,3 +1,11 @@
+import sys
+# Override sqlite3 with pysqlite3-binary on Linux (Streamlit Cloud) to bypass older SQLite versions (M3)
+try:
+    __import__('pysqlite3')
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    pass
+
 import os
 import warnings
 
