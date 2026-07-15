@@ -19,13 +19,14 @@ def evaluate_brief(
     is_gemini_active = is_gemini_api_active()
 
     if not is_gemini_active:
-        # Do not return fake high scores. Indicate clearly that the system is offline.
+        # Do not return negative values which skew stats. Indicate offline state via flag (M4).
         return {
-            "faithfulness": -1.0,
-            "answer_relevance": -1.0,
-            "math_accuracy": -1.0,
-            "overall_score": -1.0,
-            "feedback": "Offline evaluation mode. Grounding evaluations (faithfulness, relevance, math accuracy) require an active GEMINI_API_KEY to run the LLM-as-a-judge suite."
+            "faithfulness": 0.0,
+            "answer_relevance": 0.0,
+            "math_accuracy": 0.0,
+            "overall_score": 0.0,
+            "feedback": "Offline evaluation mode. Grounding evaluations (faithfulness, relevance, math accuracy) require an active GEMINI_API_KEY to run the LLM-as-a-judge suite.",
+            "is_offline": True
         }
 
     try:

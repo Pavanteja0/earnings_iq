@@ -19,10 +19,12 @@ class AuditorAgent(BaseAgent):
             "4. Provide a structured audit report: state whether the draft passed or failed, list any specific corrections, "
             "and output a finalized, corrected brief with correct figures."
         )
+        from config import PREMIUM_GEMINI_MODEL
         super().__init__(
             name="Auditor Analyst",
             role="Audits citations, recalculates ratios, flags hallucinations, and produces the final certified brief.",
-            system_prompt=system_prompt
+            system_prompt=system_prompt,
+            model_name=PREMIUM_GEMINI_MODEL
         )
 
     def audit(self, brief: str, retriever: Retriever) -> Dict[str, Any]:

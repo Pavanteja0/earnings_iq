@@ -55,8 +55,15 @@ class Indexer:
     Handles indexing of document chunks into ChromaDB.
     """
     def __init__(self):
-        # Initialize persistent Chroma client
-        self.client = chromadb.PersistentClient(path=str(DB_DIR))
+        # Initialize persistent Chroma client with explicit settings and lock timeouts (M3)
+        from chromadb.config import Settings
+        self.client = chromadb.PersistentClient(
+            path=str(DB_DIR),
+            settings=Settings(
+                anonymized_telemetry=False,
+                is_persistent=True
+            )
+        )
         
         # Check if Gemini API is active
         from config import is_gemini_api_active
@@ -92,6 +99,19 @@ class Indexer:
         """
         if not chunks:
             return
+
+        from core.rag.retriever import DB_LOCK
+
+        # M9: Deduplicate chunks by deleting existing ones with the same source metadata
+        sources = {chunk["metadata"].get("source") for chunk in chunks if chunk.get("metadata") and chunk["metadata"].get("source")}
+        for src in sources:
+            if src:
+                try:
+                    with DB_LOCK:
+                        self.collection.delete(where={"source": src})
+                        print(f"Cleared existing chunks for source file: {src}")
+                except Exception as de:
+                    print(f"Failed to clear old chunks for {src}: {de}")
 
         documents = []
         metadatas = []

@@ -6,10 +6,11 @@ class BaseAgent:
     Base class for agents in the multi-agent system.
     Tracks reasoning logs and handles communication with the LLM.
     """
-    def __init__(self, name: str, role: str, system_prompt: str):
+    def __init__(self, name: str, role: str, system_prompt: str, model_name: Optional[str] = None):
         self.name = name
         self.role = role
         self.system_prompt = system_prompt
+        self.model_name = model_name
         self.logs: List[Dict[str, str]] = []  # List of dicts: {"action": str, "details": str}
 
     def log(self, action: str, details: str):
@@ -38,7 +39,7 @@ class BaseAgent:
 
         try:
             model = genai.GenerativeModel(
-                model_name=DEFAULT_GEMINI_MODEL,
+                model_name=self.model_name or DEFAULT_GEMINI_MODEL,
                 system_instruction=self.system_prompt
             )
             

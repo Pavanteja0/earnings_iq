@@ -13,6 +13,14 @@ st.set_page_config(
 from config import init_gemini, DATA_DIR
 from core.orchestrator import Orchestrator
 
+def escape_dollar_signs(text: str) -> str:
+    """Escapes dollar signs to prevent Streamlit from misinterpreting them as LaTeX block delimiters."""
+    if not isinstance(text, str):
+        return text
+    # Normalize already-escaped dollars first to avoid double-escaping
+    text = text.replace(r"\$", "$")
+    return text.replace("$", r"\$")
+
 # Centralized initialization of all session state variables at startup (M15)
 st.session_state.setdefault("orchestrator", Orchestrator())
 st.session_state.setdefault("pdf_10q", None)
@@ -312,7 +320,7 @@ with tab_brief:
             brief_text = results["brief"]
             brief_text = re.sub(r"^###?\s+(Final|Corrected|Compiled|Research)?\s*Brief\s*\n+", "", brief_text, flags=re.IGNORECASE)
             brief_text = re.sub(r"^===+.*?===+\n+", "", brief_text)
-            st.markdown(brief_text.strip())
+            st.markdown(escape_dollar_signs(brief_text.strip()))
             
         with col_sidebar:
             st.markdown("### Compliance & Audit Status")
@@ -326,13 +334,13 @@ with tab_brief:
             with st.expander("🔍 Grounding Audit"):
                 grounding_text = results.get("grounding_report", results["audit_report"])
                 grounding_text = re.sub(r"^===+.*?===+\n+", "", grounding_text)
-                st.markdown(grounding_text.strip())
+                st.markdown(escape_dollar_signs(grounding_text.strip()))
                 
             with st.expander("🧮 Math Recalculation"):
                 math_text = results.get("math_report", "")
                 math_text = re.sub(r"^===+.*?===+\n+", "", math_text)
                 if math_text:
-                    st.markdown(math_text.strip())
+                    st.markdown(escape_dollar_signs(math_text.strip()))
                 else:
                     st.info("No math recalculations generated.")
                 
@@ -360,7 +368,7 @@ with tab_agents:
                 
                 st.markdown("---")
                 st.markdown("#### Individual Agent Output:")
-                st.markdown(agent_data["output"])
+                st.markdown(escape_dollar_signs(agent_data["output"]))
     else:
         st.info("No active agent dialogues to show. Run the workflow to watch the agents interact.")
 
@@ -375,8 +383,10 @@ with tab_evals:
         
         c1, c2, c3, c4 = st.columns(4)
         
+        is_offline = evals.get("is_offline", False)
+        
         def format_metric(val):
-            return f"{int(val * 100)}%" if val >= 0 else "N/A (Offline)"
+            return "N/A (Offline)" if is_offline else f"{int(val * 100)}%"
             
         with c1:
             st.metric("Faithfulness (Groundedness)", format_metric(evals['faithfulness']))

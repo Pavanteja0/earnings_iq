@@ -1,4 +1,5 @@
 import time
+import logging
 from pathlib import Path
 from typing import Dict, Any, List, Callable, Optional
 
@@ -16,6 +17,8 @@ from .agents.auditor import AuditorAgent
 
 from .evals.metrics import evaluate_brief
 
+logger = logging.getLogger("EarningsIQ")
+
 class Orchestrator:
     """
     Main orchestrator for the EarningsIQ Multi-Agent system.
@@ -30,7 +33,7 @@ class Orchestrator:
         self.qual_agent = QualitativeAgent()
         self.synth_agent = SynthesisAgent()
         self.auditor_agent = AuditorAgent()
-
+        
     def ingest_materials(
         self, 
         pdf_path: Path, 
@@ -43,24 +46,24 @@ class Orchestrator:
         Runs the parsing and ingestion pipeline for all uploaded files
         and indexes the output chunks into ChromaDB.
         """
-        print("Ingestion started...")
+        logger.info("Ingestion started...")
         self.indexer.reset_collection()
         
         all_chunks = []
         
         # 1. Parse 10-Q / 10-K
-        print(f"Parsing 10-Q: {pdf_path}")
+        logger.info(f"Parsing 10-Q: {pdf_path}")
         chunks_10q = parse_10q_pdf(pdf_path, max_pages=max_pages)
         all_chunks.extend(chunks_10q)
         
         # 2. Parse slide deck
-        print(f"Parsing Investor Presentation: {deck_path}")
+        logger.info(f"Parsing Investor Presentation: {deck_path}")
         chunks_deck = parse_presentation_deck(deck_path, use_vision=use_vision, max_pages=max_pages)
         all_chunks.extend(chunks_deck)
         
         # 3. Analyze earnings call audio/transcript
         # (This is returned as a summary report for qualitative context)
-        print(f"Parsing Call Audio: {audio_path}")
+        logger.info(f"Parsing Call Audio: {audio_path}")
         call_raw = analyze_call_audio(audio_path)
         
         # Add transcript chunks to RAG database for specific citation matching

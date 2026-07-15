@@ -139,8 +139,11 @@ class Retriever:
                 
             b_score = doc_id_to_bm25[cid]["norm_bm25"] if cid in doc_id_to_bm25 else 0.0
             
-            # Linear score fusion
-            hybrid_score = 0.5 * v_score + 0.5 * b_score
+            # Linear score fusion (M10: fallback to vector weight if BM25 is inactive)
+            if has_bm25:
+                hybrid_score = 0.5 * v_score + 0.5 * b_score
+            else:
+                hybrid_score = v_score
             
             fused_chunks.append({
                 "id": cid,
@@ -160,16 +163,28 @@ class Retriever:
         from config import is_gemini_api_active
         is_gemini_active = is_gemini_api_active()
         
+        final_list = candidate_chunks[:top_k]
         if is_gemini_active and len(candidate_chunks) > 1:
             try:
-                reranked_chunks = self._llm_rerank(query, candidate_chunks, top_k)
-                return reranked_chunks
+                final_list = self._llm_rerank(query, candidate_chunks, top_k)
             except Exception as e:
                 print(f"LLM Reranking failed: {e}. Falling back to hybrid fused ranking.")
+                candidate_chunks.sort(key=lambda x: x["relevance_score"], reverse=True)
+                final_list = candidate_chunks[:top_k]
         
-        # Fallback: Sort by fused hybrid score and take top_k
-        candidate_chunks.sort(key=lambda x: x["relevance_score"], reverse=True)
-        return candidate_chunks[:top_k]
+        # M2: Truncate returned context chunk list if total character length exceeds 40,000 (approx 10k tokens)
+        truncated_list = []
+        total_chars = 0
+        for chunk in final_list:
+            chunk_len = len(chunk.get("text", ""))
+            if total_chars + chunk_len > 40000:
+                if not truncated_list:
+                    truncated_list.append(chunk)
+                break
+            truncated_list.append(chunk)
+            total_chars += chunk_len
+            
+        return truncated_list
 
     def _llm_rerank(
         self, 

@@ -21,7 +21,13 @@ def parse_presentation_deck(file_path: Path, use_vision: bool = True, max_pages:
         is_gemini_active = is_gemini_api_active()
 
         def process_slide(page_num: int, page) -> Dict[str, Any]:
-            slide_text = page.get_text("text").strip()
+            # Deduplicate consecutive/duplicate slide layout text lines (M8)
+            raw_lines = [l.strip() for l in page.get_text("text").split("\n")]
+            unique_lines = []
+            for line in raw_lines:
+                if line and (not unique_lines or line != unique_lines[-1]):
+                    unique_lines.append(line)
+            slide_text = "\n".join(unique_lines).strip()
             # Render slide at 100 DPI and compress as JPEG to reduce transfer payload by 90% (M8)
             pix = page.get_pixmap(dpi=100)
             img_bytes = pix.tobytes("jpg")

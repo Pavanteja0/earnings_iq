@@ -21,10 +21,12 @@ class SynthesisAgent(BaseAgent):
             "   - **Source Citations Index**: Table listing every cited source item.\n"
             "3. Ensure all citations are preserved in brackets (e.g., [10-Q, Page 8])."
         )
+        from config import PREMIUM_GEMINI_MODEL
         super().__init__(
             name="Synthesis Writer",
             role="Compiles financial analyses into the final analyst-grade research brief.",
-            system_prompt=system_prompt
+            system_prompt=system_prompt,
+            model_name=PREMIUM_GEMINI_MODEL
         )
 
     def synthesize(self, quant_report: str, qual_report: str) -> str:

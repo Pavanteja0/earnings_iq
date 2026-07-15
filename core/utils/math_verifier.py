@@ -111,24 +111,32 @@ def verify_math_claims(brief: str) -> Dict[str, Any]:
             citation = claim.get("citation", "")
             
             # Run the actual mathematical recalculation in Python
-            if op == "growth":
-                if val2 == 0:
-                    computed = 0.0
+            if val2 == 0:
+                computed = 0.0
+                is_correct = False
+                diff = 999.0
+                if op == "growth":
+                    formula_str = f"({val1} - {val2}) / {val2}"
                 else:
-                    computed = (val1 - val2) / val2
-                formula_str = f"({val1} - {val2}) / {val2}"
-            elif op == "ratio":
-                if val2 == 0:
-                    computed = 0.0
-                else:
-                    computed = val1 / val2
-                formula_str = f"{val1} / {val2}"
+                    formula_str = f"{val1} / {val2}"
             else:
-                continue
-                
-            # Compute difference with 1% absolute rounding tolerance (e.g. 10.0% vs 9.98% passes)
-            diff = abs(computed - stated)
-            is_correct = diff < 0.015
+                if op == "growth":
+                    computed = (val1 - val2) / val2
+                    formula_str = f"({val1} - {val2}) / {val2}"
+                    diff = abs(computed - stated)
+                    is_correct = diff < 0.015
+                elif op == "ratio":
+                    computed = val1 / val2
+                    formula_str = f"{val1} / {val2}"
+                    # Use relative difference for ratios > 1.0, absolute for small percentages <= 1.0 (M6)
+                    if computed > 1.0:
+                        diff = abs(computed - stated) / max(computed, 1e-9)
+                        is_correct = diff < 0.05  # 5% relative tolerance
+                    else:
+                        diff = abs(computed - stated)
+                        is_correct = diff < 0.015
+                else:
+                    continue
             
             if is_correct:
                 verified_count += 1
@@ -171,3 +179,16 @@ def verify_math_claims(brief: str) -> Dict[str, Any]:
             "claims": [],
             "report": f"Error during deterministic math verification: {str(e)}"
         }
+
+def parse_confidence_score(brief: str) -> int:
+    """
+    Parses the confidence score from a synthesized brief.
+    Supports 'X/10', 'X / 10', and 'X out of 10' format variations (M12).
+    """
+    match = re.search(r"score:\s*(\d+)\s*(?:/\s*10|out\s+of\s+10)", brief, re.IGNORECASE)
+    if match:
+        try:
+            return int(match.group(1))
+        except ValueError:
+            pass
+    return 5  # Default fallback score
