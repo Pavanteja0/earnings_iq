@@ -70,23 +70,38 @@ st.markdown("""
     h1, h2, h3, h4, h5, h6 {
         color: #1e293b !important;
         font-weight: 700 !important;
+        font-family: 'Outfit', 'Inter', sans-serif !important;
     }
 
-    /* Premium Gradient Header */
-    .title-gradient {
+    /* Typewriter Header Animation (inspired by Aceternity Typewriter Effect) */
+    .typewriter-title {
         background: linear-gradient(90deg, #1e3a8a, #0d9488, #059669);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-size: 3rem;
+        font-size: 3.2rem;
         font-weight: 800;
-        margin-bottom: 0.1rem;
         font-family: 'Outfit', 'Inter', sans-serif;
+        border-right: 3px solid #0d9488;
+        display: inline-block;
+        white-space: nowrap;
+        overflow: hidden;
+        width: 0;
+        animation: type-text 2.5s steps(10, end) forwards, blink-caret 0.75s step-end infinite;
+        margin-bottom: 0.1rem;
+    }
+    @keyframes type-text {
+        from { width: 0; }
+        to { width: 6.2em; } /* 10 chars "EarningsIQ" is ~6.2em */
+    }
+    @keyframes blink-caret {
+        from, to { border-color: transparent }
+        50% { border-color: #0d9488 }
     }
     
     .subtitle {
         font-size: 1.15rem;
         color: #64748b;
-        margin-bottom: 2rem;
+        margin-bottom: 2.5rem;
         font-family: 'Inter', sans-serif;
     }
 
@@ -105,6 +120,51 @@ st.markdown("""
         transform: translateY(-2px) !important;
         box-shadow: 0 12px 40px rgba(13, 148, 136, 0.12) !important;
         border-color: rgba(13, 148, 136, 0.35) !important;
+    }
+
+    /* Spotlight/Focus Ingestion Card (inspired by Aceternity Card Spotlight) */
+    .spotlight-card {
+        background: #ffffff !important;
+        border: 1px solid rgba(13, 148, 136, 0.12) !important;
+        border-radius: 16px !important;
+        padding: 24px !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02) !important;
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        margin-bottom: 20px !important;
+        min-height: 250px !important;
+    }
+    .spotlight-card:hover {
+        transform: translateY(-4px) scale(1.01) !important;
+        border-color: rgba(13, 148, 136, 0.35) !important;
+        box-shadow: 0 20px 40px rgba(13, 148, 136, 0.08) !important;
+    }
+
+    /* Uiverse-style File Uploader overrides */
+    [data-testid="stFileUploader"] {
+        border: 2px dashed rgba(13, 148, 136, 0.2) !important;
+        background-color: rgba(241, 245, 249, 0.5) !important;
+        border-radius: 12px !important;
+        padding: 10px !important;
+        transition: all 0.3s ease !important;
+    }
+    [data-testid="stFileUploader"]:hover {
+        border-color: #0d9488 !important;
+        background-color: rgba(13, 148, 136, 0.02) !important;
+    }
+
+    /* Kokonut UI-style Alert Banner */
+    .dataset-banner {
+        background-color: rgba(13, 148, 136, 0.04) !important;
+        border-left: 4px solid #0d9488 !important;
+        padding: 14px 20px !important;
+        border-radius: 4px 12px 12px 4px !important;
+        margin-bottom: 25px !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.01) !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 12px !important;
+        font-size: 0.95rem !important;
+        color: #1e293b !important;
     }
 
     /* Bull/Bear Cases (Clean Light Themes) */
@@ -246,8 +306,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# App Title Header
-st.markdown('<div class="title-gradient">EarningsIQ</div>', unsafe_allow_html=True)
+# App Title Header with Typewriter effect (inspired by Aceternity Typewriter Effect)
+st.markdown('<div class="typewriter-title">EarningsIQ</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Multimodal Financial Intelligence Multi-Agent System</div>', unsafe_allow_html=True)
 
 # ----------------- SIDEBAR CONFIG -----------------
@@ -358,25 +418,34 @@ with tab_upload:
     
     col1, col2, col3 = st.columns(3)
     
-    # Show active sample notification
-    if "loaded_sample_name" in st.session_state:
-        st.info(f"Currently active dataset: **{st.session_state.loaded_sample_name}** (loaded from sample library).")
+    # Show active sample notification (inspired by Kokonut UI banner notifications)
+    if "loaded_sample_name" in st.session_state and st.session_state.loaded_sample_name:
+        st.markdown(
+            f'<div class="dataset-banner">🔔 Currently active dataset: <strong>{st.session_state.loaded_sample_name}</strong></div>', 
+            unsafe_allow_html=True
+        )
         
     with col1:
-        st.subheader("1. 10-Q or 10-K Report")
+        st.markdown('<div class="spotlight-card">', unsafe_allow_html=True)
+        st.subheader("1. 10-Q filing")
         uploaded_10q = st.file_uploader("Upload SEC Filing (PDF)", type=["pdf"], key="upload_10q")
+        st.markdown('</div>', unsafe_allow_html=True)
         
     with col2:
+        st.markdown('<div class="spotlight-card">', unsafe_allow_html=True)
         st.subheader("2. Investor Deck")
         uploaded_deck = st.file_uploader("Upload Presentation Slide Deck (PDF)", type=["pdf"], key="upload_deck")
+        st.markdown('</div>', unsafe_allow_html=True)
         
     with col3:
-        st.subheader("3. Earnings Call Call")
+        st.markdown('<div class="spotlight-card">', unsafe_allow_html=True)
+        st.subheader("3. Earnings Call")
         uploaded_audio = st.file_uploader(
             "Upload Call Audio (.mp3, .wav) or Transcript (.txt, .pdf)", 
             type=["mp3", "wav", "txt", "pdf"], 
             key="upload_audio"
         )
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # Ingestion button
     st.write("---")
