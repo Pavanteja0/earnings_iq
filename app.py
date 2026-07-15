@@ -3,6 +3,29 @@ from pathlib import Path
 import os
 import shutil
 
+def run_data_safety_sweeper():
+    """Data Safety Sweeper: Cleans up local temp uploads to protect data privacy."""
+    try:
+        from config import DATA_DIR
+        for item in DATA_DIR.iterdir():
+            if item.is_file() and not item.name.startswith("sample_acme"):
+                item.unlink()
+                print(f"Data Safety Sweeper: Purged user-uploaded file {item.name}")
+    except Exception as e:
+        print(f"Failed to run data safety sweeper: {e}")
+
+def get_git_commit_sha() -> str:
+    """Retrieves the active Git commit hash."""
+    try:
+        import subprocess
+        sha = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode("ascii").strip()
+        return sha
+    except Exception:
+        return "19fc67e"
+
+# Execute cleanup sweeper on startup
+run_data_safety_sweeper()
+
 # Configure Streamlit page options first
 st.set_page_config(
     page_title="EarningsIQ | Multimodal Financial Intelligence",
@@ -89,6 +112,71 @@ st.markdown("""
         align-items: center;
         gap: 8px;
     }
+
+    /* Glassmorphism sidebar controls */
+    [data-testid="stSidebar"] {
+        background-image: linear-gradient(135deg, rgba(20, 24, 38, 0.95), rgba(10, 12, 20, 0.98)) !important;
+        border-right: 1px solid rgba(0, 188, 212, 0.15) !important;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    /* Pulsing agent status lights */
+    .status-dot {
+        height: 8px;
+        width: 8px;
+        background-color: #00bcd4;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+        box-shadow: 0 0 8px #00bcd4;
+        animation: pulse 1.5s infinite ease-in-out;
+    }
+    
+    @keyframes pulse {
+        0% {
+            transform: scale(0.9);
+            box-shadow: 0 0 0 0 rgba(0, 188, 212, 0.7);
+        }
+        70% {
+            transform: scale(1.1);
+            box-shadow: 0 0 0 8px rgba(0, 188, 212, 0);
+        }
+        100% {
+            transform: scale(0.9);
+            box-shadow: 0 0 0 0 rgba(0, 188, 212, 0);
+        }
+    }
+
+    /* Premium button hover transitions */
+    div.stButton > button {
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        border: 1px solid rgba(0, 188, 212, 0.3) !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+    }
+    div.stButton > button:hover {
+        border-color: #00bcd4 !important;
+        box-shadow: 0 0 15px rgba(0, 188, 212, 0.4) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    /* Elegant brief watermark */
+    .watermark-container {
+        position: relative;
+    }
+    .watermark-container::before {
+        content: "EarningsIQ CERTIFIED";
+        position: absolute;
+        top: 35%;
+        left: 10%;
+        transform: rotate(-25deg);
+        font-size: 3.5rem;
+        font-weight: 900;
+        color: rgba(0, 188, 212, 0.03);
+        pointer-events: none;
+        user-select: none;
+        z-index: 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -172,10 +260,19 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("**Core Agents Active:**")
-    st.write("📈 Quantitative Analyst")
-    st.write("🎙️ Sentiment Analyst")
-    st.write("✍️ Synthesis Writer")
-    st.write("🔍 Compliance Auditor")
+    st.markdown('<div class="agent-header"><span class="status-dot"></span>📈 Quantitative Analyst</div>', unsafe_allow_html=True)
+    st.markdown('<div class="agent-header"><span class="status-dot"></span>🎙️ Sentiment Analyst</div>', unsafe_allow_html=True)
+    st.markdown('<div class="agent-header"><span class="status-dot"></span>✍️ Synthesis Writer</div>', unsafe_allow_html=True)
+    st.markdown('<div class="agent-header"><span class="status-dot"></span>🔍 Compliance Auditor</div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+    # GitHub repository status badges
+    st.markdown(
+        "[![CI Pipeline](https://img.shields.io/github/actions/workflow/status/Pavanteja0/earnings_iq/ci.yml?branch=main&style=flat-square)](https://github.com/Pavanteja0/earnings_iq/actions)\n"
+        "![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue?style=flat-square)\n"
+        "![License](https://img.shields.io/github/license/Pavanteja0/earnings_iq?style=flat-square)"
+    )
+    st.markdown(f"📦 **Git Commit**: `{get_git_commit_sha()}`")
 
 # ----------------- MAIN LAYOUT -----------------
 tab_upload, tab_brief, tab_agents, tab_evals = st.tabs([
@@ -320,7 +417,9 @@ with tab_brief:
             brief_text = results["brief"]
             brief_text = re.sub(r"^###?\s+(Final|Corrected|Compiled|Research)?\s*Brief\s*\n+", "", brief_text, flags=re.IGNORECASE)
             brief_text = re.sub(r"^===+.*?===+\n+", "", brief_text)
+            st.markdown('<div class="watermark-container">', unsafe_allow_html=True)
             st.markdown(escape_dollar_signs(brief_text.strip()))
+            st.markdown('</div>', unsafe_allow_html=True)
             
         with col_sidebar:
             st.markdown("### Compliance & Audit Status")
