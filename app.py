@@ -426,26 +426,20 @@ with tab_upload:
         )
         
     with col1:
-        st.markdown('<div class="spotlight-card">', unsafe_allow_html=True)
         st.subheader("1. 10-Q filing")
         uploaded_10q = st.file_uploader("Upload SEC Filing (PDF)", type=["pdf"], key="upload_10q")
-        st.markdown('</div>', unsafe_allow_html=True)
         
     with col2:
-        st.markdown('<div class="spotlight-card">', unsafe_allow_html=True)
         st.subheader("2. Investor Deck")
         uploaded_deck = st.file_uploader("Upload Presentation Slide Deck (PDF)", type=["pdf"], key="upload_deck")
-        st.markdown('</div>', unsafe_allow_html=True)
         
     with col3:
-        st.markdown('<div class="spotlight-card">', unsafe_allow_html=True)
         st.subheader("3. Earnings Call")
         uploaded_audio = st.file_uploader(
             "Upload Call Audio (.mp3, .wav) or Transcript (.txt, .pdf)", 
             type=["mp3", "wav", "txt", "pdf"], 
             key="upload_audio"
         )
-        st.markdown('</div>', unsafe_allow_html=True)
 
     # Ingestion button
     st.write("---")
