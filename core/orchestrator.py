@@ -93,11 +93,13 @@ class Orchestrator:
     def execute_workflow(
         self, 
         call_analysis_raw: str,
-        progress_cb: Optional[Callable[[str, int], None]] = None
+        progress_cb: Optional[Callable[[str, int], None]] = None,
+        fast_mode: bool = False
     ) -> Dict[str, Any]:
         """
         Runs the Multi-Agent team execution flow:
-        Quantitative -> Qualitative -> Synthesis -> Auditor -> Evals
+        - Standard Mode: Quantitative -> Qualitative -> Synthesis -> Auditor -> Evals (sequential)
+        - Fast Mode: Synthesis Direct -> (Auditor & Evals concurrently in parallel)
         """
         agent_logs = []
         
@@ -112,9 +114,54 @@ class Orchestrator:
         self.synth_agent.logs.clear()
         self.auditor_agent.logs.clear()
 
+        import concurrent.futures
+
+        if fast_mode:
+            # 1. Direct Synthesis (retrieves and drafts in a single step)
+            update_progress("Synthesizing Research Brief directly (Fast Mode)...", 30)
+            draft_brief = self.synth_agent.synthesize_direct(self.retriever, call_analysis_raw)
+            agent_logs.append({"agent": self.synth_agent.name, "logs": list(self.synth_agent.logs), "output": draft_brief})
+
+            # 2. Concurrently run Auditor and LLMOps Evals in parallel
+            update_progress("Auditing citations & evaluating quality in parallel...", 70)
+            
+            # Fetch unique contexts from Synthesis retrieval to ground Evals
+            unique_contexts = []
+            for log in self.synth_agent.logs:
+                if log["action"] == "Retrieving Context" and "Query:" in log["details"]:
+                    query = log["details"].split("Query: '")[1].split("'")[0]
+                    hits = self.retriever.retrieve(query, top_k=2)
+                    for h in hits:
+                        if h["text"] not in unique_contexts:
+                            unique_contexts.append(h["text"])
+                            
+            if not unique_contexts:
+                # Fallback context in case logging differed
+                hits = self.retriever.retrieve("revenue net income eps gross profit margin", top_k=5)
+                unique_contexts = [h["text"] for h in hits]
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                future_audit = executor.submit(self.auditor_agent.audit, draft_brief, self.retriever)
+                future_evals = executor.submit(evaluate_brief, draft_brief, unique_contexts)
+                
+                audit_res = future_audit.result()
+                eval_metrics = future_evals.result()
+
+            agent_logs.append({"agent": self.auditor_agent.name, "logs": list(self.auditor_agent.logs), "output": audit_res["audit_report"]})
+            final_brief = audit_res["brief"]
+            update_progress("Workflow completed successfully!", 100)
+
+            return {
+                "brief": final_brief,
+                "audit_report": audit_res["audit_report"],
+                "audit_status": audit_res["status"],
+                "evals": eval_metrics,
+                "agent_logs": agent_logs
+            }
+
+        # --- STANDARD MODE (Full Sequential Multi-Agent Flow) ---
         # Step 1 & 2: Concurrently run Quantitative & Qualitative analyses in parallel
         update_progress("Initiating Quantitative & Qualitative Analysts in parallel...", 20)
-        import concurrent.futures
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
             future_quant = executor.submit(self.quant_agent.analyze, self.retriever)
             future_qual = executor.submit(self.qual_agent.analyze, self.retriever, call_analysis_raw)
@@ -139,7 +186,6 @@ class Orchestrator:
 
         # Step 5: Evaluate RAG & Grounding Quality (LLMOps Evals)
         update_progress("Running RAG Faithfulness & Math Accuracy Evaluations...", 90)
-        # Pull out unique content pieces retrieved during the run
         unique_contexts = []
         for log in self.quant_agent.logs + self.qual_agent.logs:
             if log["action"] == "Retrieving Context" and "Query:" in log["details"]:

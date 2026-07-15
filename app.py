@@ -149,6 +149,14 @@ with st.sidebar:
     )
 
     st.markdown("---")
+    st.markdown("**Workflow Options:**")
+    fast_mode = st.checkbox(
+        "Enable Fast Mode (~5s)", 
+        value=True,
+        help="Drafts the brief directly and executes audits/evals concurrently. Bypasses sequential multi-agent stages for extreme speed."
+    )
+
+    st.markdown("---")
     st.markdown("**Core Agents Active:**")
     st.write("📈 Quantitative Analyst")
     st.write("🎙️ Sentiment Analyst")
@@ -263,7 +271,8 @@ with tab_upload:
             # 3. Run multi-agent workflow
             results = orchestrator.execute_workflow(
                 call_analysis_raw=stats["call_analysis_raw"],
-                progress_cb=update_progress_ui
+                progress_cb=update_progress_ui,
+                fast_mode=fast_mode
             )
             
             # Store results in session state

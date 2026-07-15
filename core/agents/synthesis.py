@@ -44,6 +44,42 @@ class SynthesisAgent(BaseAgent):
         brief = self.run_llm(user_prompt, temperature=0.3)
         return brief
 
+    def synthesize_direct(self, retriever, call_analysis_raw: str) -> str:
+        """
+        Directly queries the RAG retriever and synthesizes the research brief in a single LLM call.
+        """
+        self.log("Synthesizing Brief Direct (Fast Mode)", "Retrieving facts and writing brief concurrently.")
+        
+        # Retrieve key contexts from RAG database
+        key_queries = [
+            "revenue net income eps gross profit margin",
+            "cloud services division segment revenues",
+            "guidance outlook risks headwind challenges",
+        ]
+        
+        grounding_context = []
+        for q in key_queries:
+            hits = retriever.retrieve(q, top_k=2)
+            for hit in hits:
+                meta = hit["metadata"]
+                ref = f"[{meta.get('type')}, Page/Slide {meta.get('page')}]"
+                grounding_context.append(f"Source Context: {hit['text']}\nReference: {ref}\n")
+                
+        context_str = "\n".join(grounding_context)
+        
+        user_prompt = (
+            "You are the Director of Research. Directly compile a publication-ready Sell-Side Equity Research Brief "
+            "using the original source contexts and qualitative call analysis below.\n\n"
+            f"=== Source Contexts ===\n{context_str}\n\n"
+            f"=== Call Analysis Raw ===\n{call_analysis_raw}\n\n"
+            "Produce the final brief. Structure it with Header Block, Executive Summary, Financial Table, "
+            "Bull/Bear Thesis, Confidence Score (1-10), and Source Citations Index. "
+            "Be precise with numbers and include citations in brackets."
+        )
+        
+        brief = self.run_llm(user_prompt, temperature=0.3)
+        return brief
+
     def get_mock_response(self, user_prompt: str) -> str:
         return (
             "# EarningsIQ Equity Research Brief\n"

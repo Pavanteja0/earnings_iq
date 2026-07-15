@@ -159,3 +159,23 @@ def test_auditor_flags_discrepancy():
     report = audit_res["audit_report"].lower()
     assert "discrepancy" in report or "adjustments" in report or "error" in report
 
+def test_orchestrator_workflow_fast_mode():
+    """Tests the orchestrator pipeline in Fast Mode."""
+    orchestrator = Orchestrator()
+    pdf_path = DATA_DIR / "sample_acme_10q.pdf"
+    deck_path = DATA_DIR / "sample_acme_deck.pdf"
+    transcript_path = DATA_DIR / "sample_acme_transcript.txt"
+    
+    # Ingest
+    stats = orchestrator.ingest_materials(pdf_path, deck_path, transcript_path, use_vision=False, max_pages=5)
+    assert stats["chunks_count"] > 0
+    
+    # Run workflow in fast mode
+    results = orchestrator.execute_workflow(stats["call_analysis_raw"], fast_mode=True)
+    assert "brief" in results
+    assert "evals" in results
+    assert "agent_logs" in results
+    # In fast mode, we skip Quant and Qual stages, so we expect exactly 2 active agents (Synthesis and Auditor)
+    assert len(results["agent_logs"]) == 2
+
+
