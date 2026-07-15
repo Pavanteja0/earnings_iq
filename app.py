@@ -269,11 +269,21 @@ with tab_upload:
             )
             
             # 3. Run multi-agent workflow
-            results = orchestrator.execute_workflow(
-                call_analysis_raw=stats["call_analysis_raw"],
-                progress_cb=update_progress_ui,
-                fast_mode=fast_mode
-            )
+            try:
+                results = orchestrator.execute_workflow(
+                    call_analysis_raw=stats["call_analysis_raw"],
+                    progress_cb=update_progress_ui,
+                    fast_mode=fast_mode
+                )
+            except TypeError as te:
+                if "unexpected keyword argument 'fast_mode'" in str(te):
+                    st.warning("⚠️ Streamlit module cache mismatch detected. Automatically falling back to standard execution mode. To enable Fast Mode, please click 'Rerun' or 'Reboot App' in the top-right Streamlit Cloud menu.")
+                    results = orchestrator.execute_workflow(
+                        call_analysis_raw=stats["call_analysis_raw"],
+                        progress_cb=update_progress_ui
+                    )
+                else:
+                    raise te
             
             # Store results in session state
             st.session_state.analysis_results = results
