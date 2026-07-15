@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import List, Dict, Any
 import google.generativeai as genai
 
-def parse_presentation_deck(file_path: Path, use_vision: bool = True) -> List[Dict[str, Any]]:
+def parse_presentation_deck(file_path: Path, use_vision: bool = True, max_pages: int = -1) -> List[Dict[str, Any]]:
     """
     Parses an investor presentation slide deck (PDF format).
     For each slide:
@@ -72,10 +72,14 @@ def parse_presentation_deck(file_path: Path, use_vision: bool = True) -> List[Di
             }
         }
 
+    num_pages = len(doc)
+    if max_pages > 0:
+        num_pages = min(num_pages, max_pages)
+
     chunks = []
     # Concurrently process slides in parallel threads
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(len(doc), 1)) as executor:
-        futures = {executor.submit(process_slide, idx + 1, doc[idx]): idx for idx in range(len(doc))}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(num_pages, 1)) as executor:
+        futures = {executor.submit(process_slide, idx + 1, doc[idx]): idx for idx in range(num_pages)}
         for future in concurrent.futures.as_completed(futures):
             chunks.append(future.result())
             

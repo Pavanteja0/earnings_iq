@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from typing import List, Dict, Any
 
-def parse_10q_pdf(file_path: Path) -> List[Dict[str, Any]]:
+def parse_10q_pdf(file_path: Path, max_pages: int = -1) -> List[Dict[str, Any]]:
     """
     Parses a 10-Q or 10-K PDF file, extracts text, tracks report sections,
     and returns a list of text chunks with rich metadata.
@@ -27,6 +27,8 @@ def parse_10q_pdf(file_path: Path) -> List[Dict[str, Any]]:
     current_section = "Front Page / Table of Contents"
     
     for page_idx, page in enumerate(doc):
+        if max_pages > 0 and page_idx >= max_pages:
+            break
         page_num = page_idx + 1
         text = page.get_text("text")
         

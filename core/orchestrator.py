@@ -36,7 +36,8 @@ class Orchestrator:
         pdf_path: Path, 
         deck_path: Path, 
         audio_path: Path,
-        use_vision: bool = True
+        use_vision: bool = True,
+        max_pages: int = -1
     ) -> Dict[str, Any]:
         """
         Runs the parsing and ingestion pipeline for all uploaded files
@@ -49,12 +50,12 @@ class Orchestrator:
         
         # 1. Parse 10-Q / 10-K
         print(f"Parsing 10-Q: {pdf_path}")
-        chunks_10q = parse_10q_pdf(pdf_path)
+        chunks_10q = parse_10q_pdf(pdf_path, max_pages=max_pages)
         all_chunks.extend(chunks_10q)
         
         # 2. Parse slide deck
         print(f"Parsing Investor Presentation: {deck_path}")
-        chunks_deck = parse_presentation_deck(deck_path, use_vision=use_vision)
+        chunks_deck = parse_presentation_deck(deck_path, use_vision=use_vision, max_pages=max_pages)
         all_chunks.extend(chunks_deck)
         
         # 3. Analyze earnings call audio/transcript

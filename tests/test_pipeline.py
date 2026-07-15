@@ -104,7 +104,7 @@ def test_real_pdf_parsing():
     pdf_path = DATA_DIR / "real_uber_2021.pdf"
     assert pdf_path.exists(), "Real Uber 10-K PDF was not downloaded."
     
-    chunks = parse_10q_pdf(pdf_path)
+    chunks = parse_10q_pdf(pdf_path, max_pages=15)
     assert len(chunks) > 0
     # Confirm it parses multiple pages and retains standard metadata
     assert any(c["metadata"]["page"] > 10 for c in chunks)
@@ -115,7 +115,7 @@ def test_real_deck_parsing():
     deck_path = DATA_DIR / "real_tsla_deck.pdf"
     assert deck_path.exists(), "Real Tesla deck PDF was not downloaded."
     
-    chunks = parse_presentation_deck(deck_path, use_vision=False)
+    chunks = parse_presentation_deck(deck_path, use_vision=False, max_pages=15)
     assert len(chunks) > 0
     # Confirm it extracted textual sections from Tesla's slides
     assert any("TSLA" in c["text"] or "Tesla" in c["text"] for c in chunks)

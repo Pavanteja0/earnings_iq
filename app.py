@@ -134,6 +134,21 @@ with st.sidebar:
         st.success("Loaded Acme Corp. sample files!")
 
     st.markdown("---")
+    st.markdown("**Ingestion Options:**")
+    use_vision = st.checkbox(
+        "Use Gemini Vision for Slides", 
+        value=False,
+        help="Transcribes slide layouts and chart visuals concurrently. Slower but extracts graphics."
+    )
+    max_pages = st.number_input(
+        "Max PDF pages to parse",
+        min_value=1,
+        max_value=200,
+        value=15,
+        help="Limits page parsing for speed. Set to a higher value for deep parsing."
+    )
+
+    st.markdown("---")
     st.markdown("**Core Agents Active:**")
     st.write("📈 Quantitative Analyst")
     st.write("🎙️ Sentiment Analyst")
@@ -219,14 +234,24 @@ with tab_upload:
                 deck_path = st.session_state.pdf_deck
                 audio_path = st.session_state.call_transcript
                 
-            # 2. Run ingestion
-            update_progress_ui("Parsing and Indexing materials...", 5)
-            stats = orchestrator.ingest_materials(
-                pdf_path=pdf_path,
-                deck_path=deck_path,
-                audio_path=audio_path,
-                use_vision=True
-            )
+            # 2. Run ingestion (cached to run in 0 seconds on repeat executions)
+            st.session_state.setdefault("last_ingested_files", None)
+            current_files_key = (str(pdf_path), str(deck_path), str(audio_path), use_vision, max_pages)
+            
+            if st.session_state.last_ingested_files != current_files_key:
+                update_progress_ui("Parsing and Indexing materials...", 5)
+                stats = orchestrator.ingest_materials(
+                    pdf_path=pdf_path,
+                    deck_path=deck_path,
+                    audio_path=audio_path,
+                    use_vision=use_vision,
+                    max_pages=max_pages
+                )
+                st.session_state.last_ingested_files = current_files_key
+                st.session_state.last_stats = stats
+            else:
+                stats = st.session_state.last_stats
+                update_progress_ui("Parsed materials loaded from cache...", 5)
             
             # Show stats
             st.success(
