@@ -339,7 +339,7 @@ with tab_agents:
                 
                 st.markdown("---")
                 st.markdown("#### Individual Agent Output:")
-                st.text_area("Agent Report Draft", agent_data["output"], height=250, key=f"out_{agent_data['agent']}")
+                st.markdown(agent_data["output"])
     else:
         st.info("No active agent dialogues to show. Run the workflow to watch the agents interact.")
 
