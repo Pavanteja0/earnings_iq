@@ -81,47 +81,48 @@ class SynthesisAgent(BaseAgent):
         return brief
 
     def get_mock_response(self, user_prompt: str) -> str:
-        return (
-            "# EarningsIQ Equity Research Brief\n"
-            "**Company**: Acme Corporation (NASDAQ: ACME)  \n"
-            "**Quarter**: Q3 Fiscal 2026  \n"
-            "**Analyst Rating**: Overweight (BUY)  \n"
-            "**Target Price**: $125.00 (Current: $108.50)  \n"
-            "**Date**: July 14, 2026  \n\n"
-            "---"
-            "### Executive Summary\n"
-            "Acme Corporation delivered a solid Q3 2026 performance, beating revenue expectations at $12.45B (+10% YoY) "
-            "and showing resilient Gross Profit Margins of 44.2% (+70 bps YoY) [10-Q, Page 12]. The expansion was driven "
-            "primarily by strong momentum in Cloud Services (+15.5% YoY) [10-Q, Page 16]. However, the quarter was marked "
-            "by structural headwind pressures on operating expenses and severe CapEx investments, which grew faster than top-line revenues.\n\n"
-            "The analyst call revealed management defensiveness regarding Cloud Division margin compression sequentially, "
-            "attributing it to accelerated server depreciation [Earnings Call, Q&A, 32:45]. While management maintains "
-            "confidence in its enterprise SaaS shift, near-term hardware headwinds in Europe represent a key risk [Earnings Call, Q&A, 41:10]. "
-            "We remain bullish on ACME's long-term enterprise market share, but advise near-term margin caution.\n\n"
-            "---"
-            "### Financial Performance Dashboard\n"
-            "| Metric | Q3 2026 | Q3 2025 | YoY Change | Source Citation |\n"
-            "| :--- | :--- | :--- | :--- | :--- |\n"
-            "| **Revenue** | $12.45B | $11.32B | +10.0% | [10-Q, Page 8] |\n"
-            "| **Gross Margin** | 44.2% | 43.5% | +70 bps | [10-Q, Page 12] |\n"
-            "| **Operating Margin** | 18.5% | 17.8% | +70 bps | [10-Q, Page 14] |\n"
-            "| **Net Income** | $1.82B | $1.64B | +11.0% | [10-Q, Page 8] |\n"
-            "| **Diluted EPS** | $0.88 | $0.78 | +12.8% | [10-Q, Page 8] |\n\n"
-            "---"
-            "### Investment Thesis\n\n"
-            "#### The Bull Case (Upside Catalyst)\n"
-            "1. **Cloud Services Scaling**: High-margin Cloud segment grew 15.5% YoY to $5.12B, expanding recurring revenue mix [10-Q, Page 16].\n"
-            "2. **Resilient Pricing Power**: Achieved a 70 bps YoY gross margin expansion despite supply chain headwinds, proving strong enterprise pricing power [10-Q, Page 12].\n"
-            "3. **Solid Cash Generation**: Generated $2.15B in operating cash flow, building cash reserves to $8.45B to fund CapEx expansion internally [10-Q, Page 4, 6].\n\n"
-            "#### The Bear Case (Downside Risks)\n"
-            "1. **Sequential Margin Erosion**: Gross margins shrank sequentially, and management was defensive about server depreciation offsets [Earnings Call, Q&A, 32:45].\n"
-            "2. **CapEx Overhang**: Substantial AI infrastructure buildout [Slide Deck, Slide 10] will weigh on near-term free cash flow yield.\n"
-            "3. **Macro Headwinds in Europe**: Enterprise spending delays are slowing hardware conversions, prompting cautious guidance for Q4 [Earnings Call, Q&A, 41:10].\n\n"
-            "---"
-            "### Confidence Score & Alignment Audit\n"
-            "**Score: 8 / 10 (High Confidence)**\n\n"
-            "**Alignment Rationale**: There is a strong consistency between management's remarks on SaaS transformation momentum "
-            "and the segments reported in the 10-Q (+15.5% SaaS revenue). However, we penalize the score by 2 points because management "
-            "downplayed the operating expense growth rate on the call, which actual disclosures showed was growing at 12.1% YoY (outpacing revenue growth). "
-            "The citations verified that statements on pricing power and cash reserve strength are fully backed by 10-Q balance sheets."
-        )
+        return """# EarningsIQ Equity Research Brief
+**Company**: Acme Corporation (NASDAQ: ACME)  
+**Quarter**: Q3 Fiscal 2026  
+**Analyst Rating**: Overweight (BUY)  
+**Target Price**: $125.00 (Current: $108.50)  
+**Date**: July 14, 2026  
+
+---
+
+### Executive Summary
+Acme Corporation delivered a solid Q3 2026 performance, beating revenue expectations at $12.45B (+10% YoY) and showing resilient Gross Profit Margins of 44.2% (+70 bps YoY) [10-Q, Page 12]. The expansion was driven primarily by strong momentum in Cloud Services (+15.5% YoY) [10-Q, Page 16]. However, the quarter was marked by structural headwind pressures on operating expenses and severe CapEx investments, which grew faster than top-line revenues.
+
+The analyst call revealed management defensiveness regarding Cloud Division margin compression sequentially, attributing it to accelerated server depreciation [Earnings Call, Q&A, 32:45]. While management maintains confidence in its enterprise SaaS shift, near-term hardware headwinds in Europe represent a key risk [Earnings Call, Q&A, 41:10]. We remain bullish on ACME's long-term enterprise market share, but advise near-term margin caution.
+
+---
+
+### Financial Performance Dashboard
+| Metric | Q3 2026 | Q3 2025 | YoY Change | Source Citation |
+| :--- | :--- | :--- | :--- | :--- |
+| **Revenue** | $12.45B | $11.32B | +10.0% | [10-Q, Page 8] |
+| **Gross Margin** | 44.2% | 43.5% | +70 bps | [10-Q, Page 12] |
+| **Operating Margin** | 18.5% | 17.8% | +70 bps | [10-Q, Page 14] |
+| **Net Income** | $1.82B | $1.64B | +11.0% | [10-Q, Page 8] |
+| **Diluted EPS** | $0.88 | $0.78 | +12.8% | [10-Q, Page 8] |
+
+---
+
+### Investment Thesis
+
+#### The Bull Case (Upside Catalyst)
+1. **Cloud Services Scaling**: High-margin Cloud segment grew 15.5% YoY to $5.12B, expanding recurring revenue mix [10-Q, Page 16].
+2. **Resilient Pricing Power**: Achieved a 70 bps YoY gross margin expansion despite supply chain headwinds, proving strong enterprise pricing power [10-Q, Page 12].
+3. **Solid Cash Generation**: Generated $2.15B in operating cash flow, building cash reserves to $8.45B to fund CapEx expansion internally [10-Q, Page 4, 6].
+
+#### The Bear Case (Downside Risks)
+1. **Sequential Margin Erosion**: Gross margins shrank sequentially, and management was defensive about server depreciation offsets [Earnings Call, Q&A, 32:45].
+2. **CapEx Overhang**: Substantial AI infrastructure buildout [Slide Deck, Slide 10] will weigh on near-term free cash flow yield.
+3. **Macro Headwinds in Europe**: Enterprise spending delays are slowing hardware conversions, prompting cautious guidance for Q4 [Earnings Call, Q&A, 41:10].
+
+---
+
+### Confidence Score & Alignment Audit
+**Score: 8 / 10 (High Confidence)**
+
+**Alignment Rationale**: There is a strong consistency between management's remarks on SaaS transformation momentum and the segments reported in the 10-Q (+15.5% SaaS revenue). However, we penalize the score by 2 points because management downplayed the operating expense growth rate on the call, which actual disclosures showed was growing at 12.1% YoY (outpacing revenue growth). The citations verified that statements on pricing power and cash reserve strength are fully backed by 10-Q balance sheets."""
