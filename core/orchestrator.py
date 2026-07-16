@@ -47,7 +47,6 @@ class Orchestrator:
         and indexes the output chunks into ChromaDB.
         """
         logger.info("Ingestion started...")
-        self.indexer.reset_collection()
         
         all_chunks = []
         

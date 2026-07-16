@@ -107,6 +107,22 @@ sequenceDiagram
 ## 🛡️ Failure Handling & Error Recovery
 
 To guarantee enterprise robustness in production cloud servers, the architecture incorporates defensive mechanisms:
-* **API Rate Limit Resilience**: The `BaseAgent` class wraps all generative calls in a retry loop using exponential backoff. If it receives an HTTP `429 Too Many Requests` error, it backs off and retries.
+* **API Rate Limit Resilience**: The `BaseAgent` class wraps all generative calls in a retry loop using exponential backoff with **random float Jitter offsets** (M7) to prevent simultaneous API retry collisions.
 * **Streamlit hot-reload recovery**: Wraps the orchestrator execution inside a dynamic `try...except TypeError` block, preventing cache conflicts when hot-reloading code segments.
 * **BM25 Empty Corpus Fallback**: If the ChromaDB database is empty or BM25 corpus initialization fails, the scoring system falls back to 100% vector similarity scoring, preventing execution failure.
+
+---
+
+## ⚖️ Design Decisions & Trade-offs
+
+### 1. Concurrency Model: ThreadPoolExecutor vs. Asyncio
+* **Decision**: We use Python's `ThreadPoolExecutor` for parallelizing the Quantitative and Qualitative agent execution threads.
+* **Trade-off**: While Python's `asyncio` is highly token-efficient for concurrency, Streamlit runs each user session inside a synchronous native thread. Introducing complex async loops within Streamlit's rendering context can lead to UI-blocking crashes. Using a thread pool allows standard network-bound HTTP calls to run in parallel safely and cleanly without async loop overhead.
+
+### 2. Database Persistence & Incremental Upserts
+* **Decision**: EarningsIQ stores vectors persistently in a local SQLite-backed ChromaDB store without wiping the collection on startup.
+* **Trade-off**: A full vector wipe simplifies ingestion state tracking but forces re-indexing on every application boot. By implementing source-level metadata purges, we enable incremental upserts where files can be added or updated individually without affecting the rest of the indexed files.
+
+### 3. Layout-Aware Ingestion
+* **Decision**: We utilize PyMuPDF block layout sorting (`sort=True`) for SEC PDF reports.
+* **Trade-off**: Simple unstructured text extraction scrambles tabular grids. Layout-aware sorting maps table grids from left-to-right, top-to-bottom, keeping quantitative columns grouped in chronological order in the generated RAG chunks.

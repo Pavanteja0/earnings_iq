@@ -64,8 +64,10 @@ class BaseAgent:
                 except Exception as ex:
                     err_str = str(ex).lower()
                     if ("429" in err_str or "resource" in err_str or "quota" in err_str or "exhausted" in err_str) and attempt < retries - 1:
-                        sleep_time = backoff ** attempt
-                        self.log("Rate Limited (429)", f"Retrying in {sleep_time}s... (Attempt {attempt+1}/{retries})")
+                        import random
+                        # M7: Add random jitter to prevent retry storms in concurrent loops
+                        sleep_time = (backoff ** attempt) + random.uniform(0, 0.5)
+                        self.log("Rate Limited (429)", f"Retrying in {sleep_time:.2f}s... (Attempt {attempt+1}/{retries})")
                         time.sleep(sleep_time)
                     else:
                         raise ex

@@ -31,7 +31,7 @@ def parse_10q_pdf(file_path: Path, max_pages: int = -1) -> List[Dict[str, Any]]:
             if max_pages > 0 and page_idx >= max_pages:
                 break
             
-            text = page.get_text("text")
+            text = page.get_text("text", sort=True)
             
             # Try to extract the printed page number from headers/footers (M9)
             printed_page_num = None

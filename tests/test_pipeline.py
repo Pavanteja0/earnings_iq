@@ -49,6 +49,12 @@ def test_deck_parsing():
     assert chunks[0]["metadata"]["type"] == "Slide Deck"
     assert "SLIDE 1" in chunks[0]["text"]
 
+def test_deck_parsing_with_vision():
+    """Tests that the investor deck parser compiles slide image structures (M5)."""
+    deck_path = DATA_DIR / "sample_acme_deck.pdf"
+    chunks = parse_presentation_deck(deck_path, use_vision=True, max_pages=1)
+    assert len(chunks) > 0
+
 def test_audio_transcript_parsing():
     """Tests that call audio parser handles text transcript fallbacks correctly."""
     transcript_path = DATA_DIR / "sample_acme_transcript.txt"
