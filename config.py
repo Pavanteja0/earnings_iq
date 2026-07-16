@@ -57,8 +57,9 @@ def init_gemini(api_key=None):
     
     try:
         genai.configure(api_key=key)
-        # Force a network request to verify the key.
-        next(iter(genai.list_models()))
+        # Force a live network request to verify both key validity and project API enablement
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        model.generate_content("ping")
         _api_active_cache = True
         return True
     except Exception:
