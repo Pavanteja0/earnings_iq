@@ -64,19 +64,56 @@ class BaseAgent:
                     break
                 except Exception as ex:
                     err_str = str(ex).lower()
-                    # M1: If model is not found (404), fall back to flash immediately!
-                    if "404" in err_str and model_name == "gemini-1.5-pro":
-                        self.log("Model 404 Not Found", "gemini-1.5-pro is not available for this API key. Falling back to gemini-1.5-flash.")
-                        model_name = DEFAULT_GEMINI_MODEL
-                        model = genai.GenerativeModel(
-                            model_name=model_name,
-                            system_instruction=self.system_prompt
-                        )
-                        response = model.generate_content(
-                            full_prompt,
-                            generation_config={"temperature": temperature}
-                        )
-                        break
+                    
+                    # M1: If model is not found (404), dynamically discover available models!
+                    if "404" in err_str:
+                        self.log("Model 404 Error", f"Model {model_name} not found. Querying available models dynamically...")
+                        try:
+                            valid_models = []
+                            for m in genai.list_models():
+                                if "generateContent" in m.supported_generation_methods:
+                                    name = m.name.replace("models/", "")
+                                    valid_models.append(name)
+                            
+                            self.log("Available Models Found", f"{valid_models}")
+                            
+                            fallback = None
+                            # 1. Try to find any flash model
+                            for vm in valid_models:
+                                if "flash" in vm:
+                                    fallback = vm
+                                    break
+                            # 2. Try to find any pro model
+                            if not fallback:
+                                for vm in valid_models:
+                                    if "pro" in vm:
+                                        fallback = vm
+                                        break
+                            # 3. Fall back to the first available model
+                            if not fallback and valid_models:
+                                fallback = valid_models[0]
+                                
+                            if fallback and fallback != model_name:
+                                self.log("Switching Model", f"Falling back to dynamically discovered model: {fallback}")
+                                model_name = fallback
+                                model = genai.GenerativeModel(
+                                    model_name=model_name,
+                                    system_instruction=self.system_prompt
+                                )
+                                response = model.generate_content(
+                                    full_prompt,
+                                    generation_config={"temperature": temperature}
+                                )
+                                break
+                        except Exception as list_ex:
+                            self.log("List Models Failed", f"Could not retrieve available models: {list_ex}")
+                            # Raise a helpful error for Google Cloud project configuration issues
+                            raise Exception(
+                                "Model not found (404). If you are using a Google Cloud (GCP) API key, "
+                                "please ensure the 'Generative Language API' is enabled in your Google Cloud Console "
+                                "at https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com"
+                            ) from ex
+                            
                     elif ("429" in err_str or "resource" in err_str or "quota" in err_str or "exhausted" in err_str) and attempt < retries - 1:
                         import random
                         # M7: Add random jitter to prevent retry storms in concurrent loops
