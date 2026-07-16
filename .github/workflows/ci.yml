@@ -24,6 +24,10 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         pip install pytest
 
+    - name: Download real data files
+      run: |
+        python download_real_data.py
+
     - name: Run tests
       run: |
         python -m pytest tests/
