@@ -38,8 +38,9 @@ class BaseAgent:
             return self.get_mock_response(user_prompt)
 
         try:
+            model_name = self.model_name or DEFAULT_GEMINI_MODEL
             model = genai.GenerativeModel(
-                model_name=self.model_name or DEFAULT_GEMINI_MODEL,
+                model_name=model_name,
                 system_instruction=self.system_prompt
             )
             
@@ -63,7 +64,20 @@ class BaseAgent:
                     break
                 except Exception as ex:
                     err_str = str(ex).lower()
-                    if ("429" in err_str or "resource" in err_str or "quota" in err_str or "exhausted" in err_str) and attempt < retries - 1:
+                    # M1: If model is not found (404), fall back to flash immediately!
+                    if "404" in err_str and model_name == "gemini-1.5-pro":
+                        self.log("Model 404 Not Found", "gemini-1.5-pro is not available for this API key. Falling back to gemini-1.5-flash.")
+                        model_name = DEFAULT_GEMINI_MODEL
+                        model = genai.GenerativeModel(
+                            model_name=model_name,
+                            system_instruction=self.system_prompt
+                        )
+                        response = model.generate_content(
+                            full_prompt,
+                            generation_config={"temperature": temperature}
+                        )
+                        break
+                    elif ("429" in err_str or "resource" in err_str or "quota" in err_str or "exhausted" in err_str) and attempt < retries - 1:
                         import random
                         # M7: Add random jitter to prevent retry storms in concurrent loops
                         sleep_time = (backoff ** attempt) + random.uniform(0, 0.5)
